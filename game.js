@@ -75,23 +75,38 @@
     active: false,
     offsetX: 0,
     offsetY: 0,
+    isTouch: false,
+    startX: 0,
   };
 
   function onPointerDown(e) {
     if (!state.running || state.paused) return;
     pointer.active = true;
+    pointer.isTouch = e.pointerType === "touch";
     const p = canvasPosFromClient(e.clientX, e.clientY);
-    pointer.offsetX = p.x - player.x;
-    pointer.offsetY = p.y - player.y;
+    pointer.startX = p.x;
+    if (!pointer.isTouch) {
+      // Mouse: drag to move precisely.
+      pointer.offsetX = p.x - player.x;
+      pointer.offsetY = p.y - player.y;
+    }
   }
   function onPointerMove(e) {
     if (!pointer.active) return;
     const p = canvasPosFromClient(e.clientX, e.clientY);
-    player.x = clamp(p.x - pointer.offsetX, 16, BASE_W - 16);
-    player.y = clamp(p.y - pointer.offsetY, 18, BASE_H - 24);
+    if (pointer.isTouch) {
+      // Touch: swipe left/right to emulate A/D.
+      const dx = p.x - pointer.startX;
+      state.touchAxisX = clamp(dx / 42, -1, 1);
+    } else {
+      player.x = clamp(p.x - pointer.offsetX, 16, BASE_W - 16);
+      player.y = clamp(p.y - pointer.offsetY, 18, BASE_H - 24);
+    }
   }
   function onPointerUp() {
     pointer.active = false;
+    pointer.isTouch = false;
+    state.touchAxisX = 0;
   }
 
   canvas.addEventListener("pointerdown", onPointerDown, { passive: true });
@@ -105,7 +120,7 @@
     paused: false,
     over: false,
     score: 0,
-    lives: 3,
+    lives: 10,
     difficulty: 1,
     t0: 0,
     lastT: 0,
@@ -113,6 +128,7 @@
     spawnEvery: 900,
     shake: 0,
     lastShotAt: 0,
+    touchAxisX: 0,
   };
 
   const player = {
@@ -140,7 +156,7 @@
     state.paused = false;
     state.over = false;
     state.score = 0;
-    state.lives = 3;
+    state.lives = 10;
     state.difficulty = 1;
     state.t0 = 0;
     state.lastT = 0;
@@ -148,6 +164,7 @@
     state.spawnEvery = 900;
     state.shake = 0;
     state.lastShotAt = 0;
+    state.touchAxisX = 0;
 
     player.x = BASE_W / 2;
     player.y = BASE_H - 70;
@@ -317,6 +334,15 @@
     if (state.lives <= 0) gameOver();
   }
 
+  function missEnemyPenalty(x, y) {
+    // Enemy passed the bottom ("没接住"): lose 1 life.
+    state.lives = Math.max(0, state.lives - 1);
+    state.shake = Math.max(state.shake, 6);
+    syncHud();
+    addFloater("-1", x, y);
+    if (state.lives <= 0) gameOver();
+  }
+
   function updateDifficulty(t) {
     const elapsed = (t - state.t0) / 1000;
     const d = 1 + elapsed / 35;
@@ -336,6 +362,9 @@
     if (keys.has("d") || keys.has("arrowright")) ax += 1;
     if (keys.has("w") || keys.has("arrowup")) ay -= 1;
     if (keys.has("s") || keys.has("arrowdown")) ay += 1;
+
+    // Touch swipe axis (mobile): acts like A/D.
+    ax += state.touchAxisX;
 
     const mag = Math.hypot(ax, ay) || 1;
     ax /= mag;
@@ -372,7 +401,10 @@
       e.x += e.vx * dt;
       e.y += e.vy * dt;
       if (e.x < 8 || e.x + e.w > BASE_W - 8) e.vx *= -1;
-      if (e.y > BASE_H + 80) enemies.splice(i, 1);
+      if (e.y > BASE_H + 20) {
+        enemies.splice(i, 1);
+        missEnemyPenalty(e.x + e.w / 2, BASE_H - 26);
+      }
     }
 
     // Collisions: bullets vs enemies
