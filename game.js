@@ -77,6 +77,7 @@
     offsetY: 0,
     isTouch: false,
     startX: 0,
+    lastX: 0,
   };
 
   function onPointerDown(e) {
@@ -85,6 +86,7 @@
     pointer.isTouch = e.pointerType === "touch";
     const p = canvasPosFromClient(e.clientX, e.clientY);
     pointer.startX = p.x;
+    pointer.lastX = p.x;
     if (!pointer.isTouch) {
       // Mouse: drag to move precisely.
       pointer.offsetX = p.x - player.x;
@@ -96,8 +98,10 @@
     const p = canvasPosFromClient(e.clientX, e.clientY);
     if (pointer.isTouch) {
       // Touch: swipe left/right to emulate A/D.
-      const dx = p.x - pointer.startX;
-      state.touchAxisX = clamp(dx / 42, -1, 1);
+      const dxStep = p.x - pointer.lastX;
+      pointer.lastX = p.x;
+      // dxStep is per event; scale so continuous swiping feels like holding A/D.
+      state.touchAxisX = clamp(dxStep / 10, -1, 1);
     } else {
       player.x = clamp(p.x - pointer.offsetX, 16, BASE_W - 16);
       player.y = clamp(p.y - pointer.offsetY, 18, BASE_H - 24);
@@ -363,8 +367,9 @@
     if (keys.has("w") || keys.has("arrowup")) ay -= 1;
     if (keys.has("s") || keys.has("arrowdown")) ay += 1;
 
-    // Touch swipe axis (mobile): acts like A/D.
+    // Touch swipe axis (mobile): acts like A/D with a bit of decay.
     ax += state.touchAxisX;
+    state.touchAxisX *= Math.pow(0.001, dt); // ~fast decay to 0 within ~0.5s
 
     const mag = Math.hypot(ax, ay) || 1;
     ax /= mag;
