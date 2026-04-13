@@ -124,7 +124,7 @@
     paused: false,
     over: false,
     score: 0,
-    lives: 10,
+    lives: 9,
     difficulty: 1,
     t0: 0,
     lastT: 0,
@@ -160,7 +160,7 @@
     state.paused = false;
     state.over = false;
     state.score = 0;
-    state.lives = 10;
+    state.lives = 9;
     state.difficulty = 1;
     state.t0 = 0;
     state.lastT = 0;
@@ -259,8 +259,9 @@
     const h = type === "tank" ? 54 : 34;
     const x = rand(16, BASE_W - 16 - w);
     const y = -h - rand(0, 40);
-    const baseSpeed = type === "tank" ? rand(70, 110) : rand(110, 190);
-    const vy = baseSpeed * (0.8 + 0.25 * Math.min(2, state.difficulty));
+    // Slower fall speed; ramps up gently with difficulty.
+    const baseSpeed = type === "tank" ? rand(55, 90) : rand(85, 150);
+    const vy = baseSpeed * (0.78 + 0.14 * Math.min(3, state.difficulty));
     const drift = rand(-40, 40) * (type === "tank" ? 0.6 : 1);
     enemies.push({
       x,
