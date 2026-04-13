@@ -182,6 +182,7 @@ canvas#game {
   display: block;
   width: 100%;
   height: auto;
+  touch-action: none;
   background: radial-gradient(800px 500px at 50% 20%, rgba(110, 231, 255, 0.08), transparent 60%),
     radial-gradient(900px 700px at 40% 80%, rgba(167, 139, 250, 0.06), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));

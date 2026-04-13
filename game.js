@@ -97,11 +97,11 @@
     if (!pointer.active) return;
     const p = canvasPosFromClient(e.clientX, e.clientY);
     if (pointer.isTouch) {
-      // Touch: swipe left/right to emulate A/D.
+      // Touch: move plane by the same distance as finger movement (horizontal).
       const dxStep = p.x - pointer.lastX;
       pointer.lastX = p.x;
-      // dxStep is per event; scale so continuous swiping feels like holding A/D.
-      state.touchAxisX = clamp(dxStep / 10, -1, 1);
+      player.x = clamp(player.x + dxStep, 16, BASE_W - 16);
+      state.touchAxisX = 0;
     } else {
       player.x = clamp(p.x - pointer.offsetX, 16, BASE_W - 16);
       player.y = clamp(p.y - pointer.offsetY, 18, BASE_H - 24);
@@ -368,9 +368,7 @@
     if (keys.has("w") || keys.has("arrowup")) ay -= 1;
     if (keys.has("s") || keys.has("arrowdown")) ay += 1;
 
-    // Touch swipe axis (mobile): acts like A/D with a bit of decay.
-    ax += state.touchAxisX;
-    state.touchAxisX *= Math.pow(0.001, dt); // ~fast decay to 0 within ~0.5s
+    // Touch control moves the player directly in pointer handlers.
 
     const mag = Math.hypot(ax, ay) || 1;
     ax /= mag;
